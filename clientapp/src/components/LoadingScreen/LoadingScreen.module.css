@@ -1,0 +1,11 @@
+.fullScreen {
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    height: 100vh; /* Full screen height */
+    width: 100%; /* Full width of the screen */
+}
+
+.centeredText {
+    text-align: center; /* center the text itself if it's multi-line */
+}

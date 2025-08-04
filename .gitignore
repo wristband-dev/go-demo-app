@@ -32,4 +32,7 @@ go.work.sum
 .vscode/
 
 CLAUDE.md
+.DS_Store
+dist/**
 
+clientapp/node_modules
