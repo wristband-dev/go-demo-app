@@ -42,27 +42,21 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-
-	wristbandClientID := os.Getenv("WRISTBAND_CLIENT_ID")
-	wristbandClientSecret := os.Getenv("WRISTBAND_CLIENT_SECRET")
-	tenantID := os.Getenv("WRISTBAND_TENANT_ID")
-	var tenantDomains *goauth.TenantDomains
-	if tenantID != "" {
-		tenantDomains = &goauth.TenantDomains{
-			TenantDomain: tenantID,
-		}
-	}
+	// Initialize the Wristband Auth configuration
+	const tenantID = "global"
 	auth, err := goauth.NewWristbandAuth(goauth.WristbandAuthConfig{
 		Client: goauth.ConfidentialClient{
-			ClientID:     wristbandClientID,
-			ClientSecret: wristbandClientSecret,
+			ClientID:     os.Getenv("CLIENT_ID"),
+			ClientSecret: os.Getenv("CLIENT_SECRET"),
 		},
 		Domains: goauth.AppDomains{
 			RootDomain:      "localhost:8080",
-			WristbandDomain: os.Getenv("WRISTBAND_DOMAIN"),
-			DefaultDomains:  tenantDomains,
+			WristbandDomain: os.Getenv("APPLICATION_VANITY_DOMAIN"),
+			DefaultDomains: &goauth.TenantDomains{
+				TenantDomain: tenantID,
+			},
 		},
-	}, goauth.WithLogoutRedirectURL("/"))
+	}, goauth.WithLogoutRedirectURL("http://localhost:8080/api/auth/login"))
 	if err != nil {
 		log.Fatal(err)
 	}

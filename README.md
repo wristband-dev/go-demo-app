@@ -43,10 +43,9 @@ cp .env.example .env  # If available, or create manually
 
 Add your Wristband configuration to `.env`:
 ```
-WRISTBAND_CLIENT_ID=your_client_id
-WRISTBAND_CLIENT_SECRET=your_client_secret
-WRISTBAND_DOMAIN=your_domain.wristband.dev
-WRISTBAND_TENANT_ID=global
+CLIENT_ID=your_client_id
+CLIENT_SECRET=your_client_secret
+APPLICATION_VANITY_DOMAIN=your_domain.wristband.dev
 ```
 
 ### 3. Install Dependencies
