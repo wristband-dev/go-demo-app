@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
-	"github.com/wristband-dev/go-auth"
+	goauth "github.com/wristband-dev/go-auth"
 )
 
 type (
@@ -50,13 +50,13 @@ func main() {
 			ClientSecret: os.Getenv("CLIENT_SECRET"),
 		},
 		Domains: goauth.AppDomains{
-			RootDomain:      "localhost:8080",
+			RootDomain:      "localhost:6001",
 			WristbandDomain: os.Getenv("APPLICATION_VANITY_DOMAIN"),
 			DefaultDomains: &goauth.TenantDomains{
 				TenantDomain: tenantID,
 			},
 		},
-	}, goauth.WithLogoutRedirectURL("http://localhost:8080/api/auth/login"))
+	}, goauth.WithLogoutRedirectURL("http://localhost:6001/api/auth/login"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func main() {
 	store := sessions.NewCookieStore(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
 	app := goauth.NewApp(auth, goauth.AppInput{
 		LoginPath:      "/api/auth/login",
-		CallbackURL:    "http://localhost:8080/api/auth/callback",
+		CallbackURL:    "http://localhost:6001/api/auth/callback",
 		SessionManager: NewGorillaSessionManager(store),
 		SessionMetadataExtractor: func(sess goauth.Session) any {
 			return Metadata{
@@ -112,7 +112,7 @@ func main() {
 	}
 	fileServer := http.FileServer(http.FS(distDir))
 
-	log.Fatal(http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	log.Fatal(http.ListenAndServe(":6001", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("\nRequest received for: %q\n", r.URL.String())
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			apiMux.ServeHTTP(w, r)
@@ -124,7 +124,7 @@ func main() {
 
 const (
 	// SessionName is the name used for the session cookie
-	SessionName = "wristband_auth_session"
+	SessionName = "session"
 
 	// SessionKey is the key used to store auth data in the session
 	SessionKey = "auth_session"
