@@ -37,6 +37,12 @@ type (
 //go:embed dist
 var frontendFS embed.FS
 
+type RoundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (fn RoundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return fn(req)
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -44,26 +50,37 @@ func main() {
 	}
 	// Initialize the Wristband Auth configuration
 	const tenantID = "global"
-	auth, err := goauth.NewWristbandAuth(goauth.WristbandAuthConfig{
-		Client: goauth.ConfidentialClient{
-			ClientID:     os.Getenv("CLIENT_ID"),
-			ClientSecret: os.Getenv("CLIENT_SECRET"),
+	authConfig := &goauth.AuthConfig{
+		ClientID:                         os.Getenv("CLIENT_ID"),
+		ClientSecret:                     os.Getenv("CLIENT_SECRET"),
+		WristbandApplicationVanityDomain: os.Getenv("APPLICATION_VANITY_DOMAIN"),
+		AutoConfigureEnabled:             false, // Enable auto-configure to fetch configuration from Wristband
+		DangerouslyDisableSecureCookies:  false, // Only for local development (HTTP)
+		SdkConfiguration: &goauth.SdkConfiguration{
+			RedirectURI: "http://localhost:6001/api/auth/callback",
 		},
-		Domains: goauth.AppDomains{
-			RootDomain:      "localhost:6001",
-			WristbandDomain: os.Getenv("APPLICATION_VANITY_DOMAIN"),
-			DefaultDomains: &goauth.TenantDomains{
-				TenantDomain: tenantID,
-			},
-		},
-	}, goauth.WithLogoutRedirectURL("http://localhost:6001/api/auth/login"))
+	}
+
+	httpClient := &http.Client{
+		Transport: RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			log.Printf("URL: %s\n", req.URL.String())
+			resp, err := http.DefaultTransport.RoundTrip(req)
+			if err != nil {
+				log.Printf("Error: %v\n", err)
+			} else if resp.StatusCode != 200 {
+				log.Printf("Invalid status code: %v\n", resp.Status)
+			}
+			return resp, nil
+		}),
+	}
+
+	auth, err := authConfig.WristbandAuth(goauth.WithHTTPClient(httpClient))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	store := sessions.NewCookieStore(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
 	app := goauth.NewApp(auth, goauth.AppInput{
-		LoginPath:      "/api/auth/login",
 		CallbackURL:    "http://localhost:6001/api/auth/callback",
 		SessionManager: NewGorillaSessionManager(store),
 		SessionMetadataExtractor: func(sess goauth.Session) any {
@@ -99,9 +116,9 @@ func main() {
 		protectedHandler = middleware(protectedHandler)
 	}
 
-	apiMux.Handle("/api/auth/login", app.LoginHandler())
+	apiMux.Handle("/api/auth/login", app.LoginHandler(goauth.WithDefaultTenantName(tenantID)))
 	apiMux.Handle("/api/auth/callback", app.CallbackHandler())
-	apiMux.Handle("/api/auth/logout", app.LogoutHandler())
+	apiMux.Handle("/api/auth/logout", app.LogoutHandler(goauth.WithRedirectURL("http://localhost:6001/api/auth/login")))
 	apiMux.Handle("/api/session", sessionHandler)
 	apiMux.Handle("/api/protected", protectedHandler)
 
