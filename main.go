@@ -50,16 +50,12 @@ func main() {
 	}
 	// Initialize the Wristband Auth configuration
 	const tenantID = "global"
-	authConfig := &goauth.AuthConfig{
-		ClientID:                         os.Getenv("CLIENT_ID"),
-		ClientSecret:                     os.Getenv("CLIENT_SECRET"),
-		WristbandApplicationVanityDomain: os.Getenv("APPLICATION_VANITY_DOMAIN"),
-		AutoConfigureEnabled:             false, // Enable auto-configure to fetch configuration from Wristband
-		DangerouslyDisableSecureCookies:  false, // Only for local development (HTTP)
-		SdkConfiguration: &goauth.SdkConfiguration{
-			RedirectURI: "http://localhost:6001/api/auth/callback",
-		},
-	}
+	authConfig := goauth.NewAuthConfig(
+		os.Getenv("CLIENT_ID"),
+		os.Getenv("CLIENT_SECRET"),
+		os.Getenv("APPLICATION_VANITY_DOMAIN"),
+		goauth.WithAutoConfigureDisabled("https://localhost:6001/login", "http://localhost:6001/api/auth/callback"),
+	)
 
 	httpClient := &http.Client{
 		Transport: RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
@@ -118,7 +114,7 @@ func main() {
 
 	apiMux.Handle("/api/auth/login", app.LoginHandler(goauth.WithDefaultTenantName(tenantID)))
 	apiMux.Handle("/api/auth/callback", app.CallbackHandler())
-	apiMux.Handle("/api/auth/logout", app.LogoutHandler(goauth.WithRedirectURL("http://localhost:6001/api/auth/login")))
+	apiMux.Handle("/api/auth/logout", app.LogoutHandler())
 	apiMux.Handle("/api/session", sessionHandler)
 	apiMux.Handle("/api/protected", protectedHandler)
 
