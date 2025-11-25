@@ -1,6 +1,6 @@
 module github.com/wristband-dev/go-demo-app
 
-go 1.25
+go 1.24.4
 
 require github.com/wristband-dev/go-auth v0.0.0-unpublished
 

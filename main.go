@@ -54,7 +54,7 @@ func main() {
 		os.Getenv("CLIENT_ID"),
 		os.Getenv("CLIENT_SECRET"),
 		os.Getenv("APPLICATION_VANITY_DOMAIN"),
-		goauth.WithAutoConfigureDisabled("https://localhost:6001/login", "http://localhost:6001/api/auth/callback"),
+		goauth.WithAutoConfigureDisabled("http://localhost:6001/login", "http://localhost:6001/api/auth/callback"),
 	)
 
 	httpClient := &http.Client{
@@ -77,7 +77,7 @@ func main() {
 
 	store := sessions.NewCookieStore(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
 	app := goauth.NewApp(auth, goauth.AppInput{
-		CallbackURL:    "http://localhost:6001/api/auth/callback",
+		CallbackURL:    "https://localhost:6001/api/auth/callback",
 		SessionManager: NewGorillaSessionManager(store),
 		SessionMetadataExtractor: func(sess goauth.Session) any {
 			return Metadata{
@@ -94,6 +94,8 @@ func main() {
 			}
 		},
 	})
+	log.Println("Wristband configuration initialized successfully")
+	log.Println("Starting server")
 
 	apiMux := http.NewServeMux()
 
@@ -125,7 +127,10 @@ func main() {
 	}
 	fileServer := http.FileServer(http.FS(distDir))
 
-	log.Fatal(http.ListenAndServe(":6001", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	const listenPort = ":6001"
+
+	log.Printf("Listening on %s\n", listenPort)
+	log.Fatal(http.ListenAndServe(listenPort, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("\nRequest received for: %q\n", r.URL.String())
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			apiMux.ServeHTTP(w, r)
