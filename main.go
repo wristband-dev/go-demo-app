@@ -49,12 +49,10 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	// Initialize the Wristband Auth configuration
-	const tenantID = "global"
 	authConfig := goauth.NewAuthConfig(
 		os.Getenv("CLIENT_ID"),
 		os.Getenv("CLIENT_SECRET"),
 		os.Getenv("APPLICATION_VANITY_DOMAIN"),
-		goauth.WithAutoConfigureDisabled("http://localhost:6001/login", "http://localhost:6001/api/auth/callback"),
 	)
 
 	httpClient := &http.Client{
@@ -76,14 +74,15 @@ func main() {
 	}
 
 	store := sessions.NewCookieStore(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
+	store.Options.Secure = false // Make sure this is true in production
+	store.Options.HttpOnly = true
+	store.Options.SameSite = http.SameSiteLaxMode
 	app := goauth.NewApp(auth, goauth.AppInput{
-		CallbackURL:    "https://localhost:6001/api/auth/callback",
 		SessionManager: NewGorillaSessionManager(store),
 		SessionMetadataExtractor: func(sess goauth.Session) any {
 			return Metadata{
-				Email:            sess.UserInfo.Email,
-				FullName:         sess.UserInfo.Email,
-				TenantDomainName: "global",
+				Email:    sess.UserInfo.Email,
+				FullName: sess.UserInfo.Email,
 				Roles: []*UserRole{
 					{
 						Name:        "app:invotasticb2b:owner",
@@ -114,7 +113,7 @@ func main() {
 		protectedHandler = middleware(protectedHandler)
 	}
 
-	apiMux.Handle("/api/auth/login", app.LoginHandler(goauth.WithDefaultTenantName(tenantID)))
+	apiMux.Handle("/api/auth/login", app.LoginHandler())
 	apiMux.Handle("/api/auth/callback", app.CallbackHandler())
 	apiMux.Handle("/api/auth/logout", app.LogoutHandler())
 	apiMux.Handle("/api/session", sessionHandler)
@@ -173,7 +172,7 @@ func (m *GorillaSessionManager) StoreSession(_ context.Context, w http.ResponseW
 			Path:     "/",
 			MaxAge:   86400 * 30, // 30 days
 			HttpOnly: true,
-			Secure:   r.TLS != nil, // Set to true if connection is HTTPS
+			Secure:   false, // Make sure this is true in production
 			SameSite: http.SameSiteLaxMode,
 		}
 	}
