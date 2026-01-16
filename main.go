@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
@@ -27,10 +28,12 @@ type (
 
 	// Metadata is the structure used to store user metadata in the session
 	Metadata struct {
-		Email            string      `json:"email"`
-		FullName         string      `json:"fullName"`
-		TenantDomainName string      `json:"tenantDomainName"`
-		Roles            []*UserRole `json:"roles"`
+		Email              string      `json:"email"`
+		FullName           string      `json:"fullName"`
+		TenantName         string      `json:"tenantName"`
+		CustomTenantDomain string      `json:"customTenantDomain"`
+		Now                string      `json:"now"`
+		Roles              []*UserRole `json:"roles"`
 	}
 )
 
@@ -41,6 +44,15 @@ type RoundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (fn RoundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return fn(req)
+}
+
+type Middlewares []func(next http.Handler) http.Handler
+
+func (m Middlewares) Apply(next http.Handler) http.Handler {
+	for _, middleware := range m {
+		next = middleware(next)
+	}
+	return next
 }
 
 func main() {
@@ -81,8 +93,11 @@ func main() {
 		SessionManager: NewGorillaSessionManager(store),
 		SessionMetadataExtractor: func(sess goauth.Session) any {
 			return Metadata{
-				Email:    sess.UserInfo.Email,
-				FullName: sess.UserInfo.Email,
+				Email:              sess.UserInfo.Email,
+				FullName:           sess.UserInfo.Email,
+				TenantName:         sess.TenantName,
+				CustomTenantDomain: sess.CustomTenantDomain,
+				Now:                time.Now().Format(time.RFC850),
 				Roles: []*UserRole{
 					{
 						Name:        "app:invotasticb2b:owner",
@@ -98,20 +113,17 @@ func main() {
 
 	apiMux := http.NewServeMux()
 
-	var sessionHandler http.Handler = app.SessionHandler()
-	var protectedHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	middlewares := Middlewares{
+		app.RefreshTokenIfExpired,
+		app.RequireAuthentication,
+		goauth.CacheControlMiddleware,
+	}
+	sessionHandler := middlewares.Apply(app.SessionHandler())
+	protectedHandler := middlewares.Apply(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"message": "This is a protected route", "value": 1}`))
-	})
-	middlewares := []func(next http.Handler) http.Handler{
-		app.RefreshTokenIfExpired,
-		app.RequireAuthentication,
-	}
-	for _, middleware := range middlewares {
-		sessionHandler = middleware(sessionHandler)
-		protectedHandler = middleware(protectedHandler)
-	}
+	}))
 
 	apiMux.Handle("/api/auth/login", app.LoginHandler())
 	apiMux.Handle("/api/auth/callback", app.CallbackHandler())

@@ -2,13 +2,17 @@ export type MySessionData = {
   email: string;
   fullName: string;
   hasOwnerRole: boolean;
-  tenantDomainName: string;
+  tenantName: string;
+  customTenantDomain: string;
+  now: string;
 }
 
 export type ApiSessionData = {
   email: string;
   fullName: string;
-  tenantDomainName: string;
+  tenantName: string;
+  customTenantDomain: string;
+  now: string;
   roles: {
     id: string;
     name: string;
