@@ -10,4 +10,4 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 )
 
-replace github.com/wristband-dev/go-auth v0.0.0-unpublished => ../go-auth
+replace github.com/wristband-dev/go-auth => ../go-auth

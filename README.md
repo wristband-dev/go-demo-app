@@ -7,20 +7,9 @@ A Wristband multi-tenant auth demo app with a Go backend and a React frontend.
 - Node.js 20.0.0 or later
 - Git
 
-## Local Development Setup
-
-This application depends on a local version of the `go-auth` library. Follow these steps to set up the development environment:
-
-### 1. Clone Both Repositories
+### 1. Clone Repository
 
 ```bash
-# Create a parent directory for both repositories
-mkdir wristband-dev
-cd wristband-dev
-
-# Clone the go-auth library
-git clone https://github.com/wristband-dev/go-auth.git
-
 # Clone this demo application
 git clone https://github.com/wristband-dev/go-demo-app.git
 ```
@@ -81,7 +70,7 @@ This will write to the `dist/` directory used by `main.go` to serve the frontend
 go run main.go
 ```
 
-The application will be available at `http://localhost:8080`.
+The application will be available at `http://localhost:6001`.
 
 ## Project Structure
 
@@ -92,7 +81,7 @@ The application will be available at `http://localhost:8080`.
 
 ## Authentication Flow
 
-1. Visit `http://localhost:8080`
+1. Visit `http://localhost:6001`
 2. Click "Login" to initiate OAuth flow
 3. Authenticate with Wristband
 4. Return to application with session established

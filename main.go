@@ -5,7 +5,6 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -31,7 +30,7 @@ type (
 		Email              string      `json:"email"`
 		FullName           string      `json:"fullName"`
 		TenantName         string      `json:"tenantName"`
-		CustomTenantDomain string      `json:"customTenantDomain"`
+		TenantCustomDomain string      `json:"tenantCustomDomain"`
 		Now                string      `json:"now"`
 		Roles              []*UserRole `json:"roles"`
 	}
@@ -39,12 +38,6 @@ type (
 
 //go:embed dist
 var frontendFS embed.FS
-
-type RoundTripperFunc func(*http.Request) (*http.Response, error)
-
-func (fn RoundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return fn(req)
-}
 
 type Middlewares []func(next http.Handler) http.Handler
 
@@ -60,54 +53,21 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	httpClient := &http.Client{}
+
 	// Initialize the Wristband Auth configuration
-	authConfig := goauth.NewAuthConfig(
+	cfg := goauth.NewAuthConfig(
 		os.Getenv("CLIENT_ID"),
 		os.Getenv("CLIENT_SECRET"),
 		os.Getenv("APPLICATION_VANITY_DOMAIN"),
 	)
-
-	httpClient := &http.Client{
-		Transport: RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
-			log.Printf("URL: %s\n", req.URL.String())
-			resp, err := http.DefaultTransport.RoundTrip(req)
-			if err != nil {
-				log.Printf("Error: %v\n", err)
-			} else if resp.StatusCode != 200 {
-				log.Printf("Invalid status code: %v\n", resp.Status)
-			}
-			return resp, nil
-		}),
-	}
-
-	auth, err := authConfig.WristbandAuth(goauth.WithHTTPClient(httpClient))
+	auth, err := cfg.WristbandAuth(goauth.WithHTTPClient(httpClient))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	store := sessions.NewCookieStore(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
-	store.Options.Secure = false // Make sure this is true in production
-	store.Options.HttpOnly = true
-	store.Options.SameSite = http.SameSiteLaxMode
-	app := goauth.NewApp(auth, goauth.AppInput{
-		SessionManager: NewGorillaSessionManager(store),
-		SessionMetadataExtractor: func(sess goauth.Session) any {
-			return Metadata{
-				Email:              sess.UserInfo.Email,
-				FullName:           sess.UserInfo.Email,
-				TenantName:         sess.TenantName,
-				CustomTenantDomain: sess.CustomTenantDomain,
-				Now:                time.Now().Format(time.RFC850),
-				Roles: []*UserRole{
-					{
-						Name:        "app:invotasticb2b:owner",
-						ID:          "someId",
-						DisplayName: "Owner",
-					},
-				},
-			}
-		},
-	})
+	app := auth.NewApp(NewGorillaSessionManager())
 	log.Println("Wristband configuration initialized successfully")
 	log.Println("Starting server")
 
@@ -118,11 +78,28 @@ func main() {
 		app.RequireAuthentication,
 		goauth.CacheControlMiddleware,
 	}
-	sessionHandler := middlewares.Apply(app.SessionHandler())
+	sessionHandler := middlewares.Apply(app.SessionHandler(goauth.WithSessionMetadataExtractor(func(sess goauth.Session) any {
+		return Metadata{
+			Email:              sess.UserInfo.Email,
+			FullName:           sess.UserInfo.Email,
+			TenantName:         sess.TenantName,
+			TenantCustomDomain: sess.CustomTenantDomain,
+			Now:                time.Now().Format(time.RFC850),
+			Roles: []*UserRole{
+				{
+					Name:        "app:invotasticb2b:owner",
+					ID:          "someId",
+					DisplayName: "Owner",
+				},
+			},
+		}
+	})))
 	protectedHandler := middlewares.Apply(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message": "This is a protected route", "value": 1}`))
+		if _, err := w.Write([]byte(`{"message": "This is a protected route", "value": 1}`)); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}))
 
 	apiMux.Handle("/api/auth/login", app.LoginHandler())
@@ -142,7 +119,6 @@ func main() {
 
 	log.Printf("Listening on %s\n", listenPort)
 	log.Fatal(http.ListenAndServe(listenPort, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("\nRequest received for: %q\n", r.URL.String())
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			apiMux.ServeHTTP(w, r)
 			return
@@ -166,7 +142,11 @@ type GorillaSessionManager struct {
 }
 
 // NewGorillaSessionManager creates a new session manager using gorilla/sessions
-func NewGorillaSessionManager(store sessions.Store) *GorillaSessionManager {
+func NewGorillaSessionManager() *GorillaSessionManager {
+	store := sessions.NewCookieStore(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
+	store.Options.Secure = false // Make sure this is true in production
+	store.Options.HttpOnly = true
+	store.Options.SameSite = http.SameSiteLaxMode
 	return &GorillaSessionManager{
 		store: store,
 	}
@@ -194,7 +174,6 @@ func (m *GorillaSessionManager) StoreSession(_ context.Context, w http.ResponseW
 	if err != nil {
 		return err
 	}
-
 	// Store the serialized session in the session store
 	sess.Values[SessionKey] = string(sessionJSON)
 
@@ -237,10 +216,8 @@ func (m *GorillaSessionManager) ClearSession(_ context.Context, w http.ResponseW
 
 	// Remove the auth data from the session
 	delete(sess.Values, SessionKey)
-
 	// Set session to expire
 	sess.Options.MaxAge = -1
-
 	// Save the session
 	return sess.Save(r, w)
 }

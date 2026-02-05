@@ -16,7 +16,7 @@ const transformSessionMetadata = (metadata: unknown): MySessionData => {
     email: apiSessionData.email,
     fullName: apiSessionData.fullName,
     tenantName: apiSessionData.tenantName,
-    customTenantDomain: apiSessionData.customTenantDomain,
+    tenantCustomDomain: apiSessionData.tenantCustomDomain,
     now: apiSessionData.now,
     hasOwnerRole: apiSessionData.roles.some(role => isOwnerRole(role.name))
   };
