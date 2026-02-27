@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -54,15 +53,13 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	httpClient := &http.Client{}
-
 	// Initialize the Wristband Auth configuration
 	cfg := goauth.NewAuthConfig(
 		os.Getenv("CLIENT_ID"),
 		os.Getenv("CLIENT_SECRET"),
 		os.Getenv("APPLICATION_VANITY_DOMAIN"),
 	)
-	auth, err := cfg.WristbandAuth(goauth.WithHTTPClient(httpClient))
+	auth, err := cfg.WristbandAuth()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,7 +71,6 @@ func main() {
 	apiMux := http.NewServeMux()
 
 	middlewares := Middlewares{
-		app.RefreshTokenIfExpired,
 		app.RequireAuthentication,
 		goauth.CacheControlMiddleware,
 	}
@@ -83,7 +79,7 @@ func main() {
 			Email:              sess.UserInfo.Email,
 			FullName:           sess.UserInfo.Email,
 			TenantName:         sess.TenantName,
-			TenantCustomDomain: sess.CustomTenantDomain,
+			TenantCustomDomain: sess.TenantCustomDomain,
 			Now:                time.Now().Format(time.RFC850),
 			Roles: []*UserRole{
 				{
@@ -153,7 +149,7 @@ func NewGorillaSessionManager() *GorillaSessionManager {
 }
 
 // StoreSession implements the goauth.SessionManager interface
-func (m *GorillaSessionManager) StoreSession(_ context.Context, w http.ResponseWriter, r *http.Request, session *goauth.Session) error {
+func (m *GorillaSessionManager) StoreSession(w http.ResponseWriter, r *http.Request, session *goauth.Session) error {
 	// Get existing session or create a new one
 	sess, err := m.store.Get(r, SessionName)
 	if err != nil {
@@ -182,7 +178,7 @@ func (m *GorillaSessionManager) StoreSession(_ context.Context, w http.ResponseW
 }
 
 // GetSession implements the goauth.SessionManager interface
-func (m *GorillaSessionManager) GetSession(_ context.Context, r *http.Request) (*goauth.Session, error) {
+func (m *GorillaSessionManager) GetSession(r *http.Request) (*goauth.Session, error) {
 	// Get existing session
 	sess, err := m.store.Get(r, SessionName)
 	if err != nil {
@@ -206,7 +202,7 @@ func (m *GorillaSessionManager) GetSession(_ context.Context, r *http.Request) (
 }
 
 // ClearSession implements the goauth.SessionManager interface
-func (m *GorillaSessionManager) ClearSession(_ context.Context, w http.ResponseWriter, r *http.Request) error {
+func (m *GorillaSessionManager) ClearSession(w http.ResponseWriter, r *http.Request) error {
 	// Get existing session
 	sess, err := m.store.Get(r, SessionName)
 	if err != nil {
