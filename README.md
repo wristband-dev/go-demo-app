@@ -14,22 +14,6 @@ A Wristband multi-tenant auth demo app with a Go backend and a React frontend.
 git clone https://github.com/wristband-dev/go-demo-app.git
 ```
 
-Your directory structure should look like:
-```
-wristband-dev/
-├── go-auth/          # The go-auth library
-└── go-demo-app/      # This demo application
-```
-
-### 2. Configure Environment Variables
-
-Create a `.env` file in the `go-demo-app` directory:
-
-```bash
-cd go-demo-app
-cp .env.example .env  # If available, or create manually
-```
-
 Add your Wristband configuration to `.env`:
 ```
 CLIENT_ID=your_client_id

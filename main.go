@@ -155,13 +155,9 @@ func (m *GorillaSessionManager) StoreSession(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		// If there's an error getting the session, create a new one
 		// This can happen if the session was tampered with or is invalid
-		sess = sessions.NewSession(m.store, SessionName)
-		sess.Options = &sessions.Options{
-			Path:     "/",
-			MaxAge:   86400 * 30, // 30 days
-			HttpOnly: true,
-			Secure:   false, // Make sure this is true in production
-			SameSite: http.SameSiteLaxMode,
+		sess, err = m.store.New(r, SessionName)
+		if err != nil {
+			return err
 		}
 	}
 
