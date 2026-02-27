@@ -28,5 +28,11 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+CLAUDE.md
+.DS_Store
+dist/**
+
+clientapp/node_modules
