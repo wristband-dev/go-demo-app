@@ -11,7 +11,6 @@ import { MySessionData } from "../types";
 const HomePage = () => {
   // React State
   const [protectedResult, setProtectedResult] = useState<number>(0);
-  const [unprotectedResult, setUnprotectedResult] = useState<number>(0);
 
   /* WRISTBAND_TOUCHPOINT - AUTHENTICATION */
   const { metadata, userId, tenantId, updateMetadata } = useWristbandSession<MySessionData>();
@@ -38,20 +37,6 @@ const HomePage = () => {
       }
     }
   }, [setProtectedResult]);
-
-  const callUnprotectedEndpoint = useCallback(async () => {
-    try {
-      const response = await backendApiClient.get("/api/unprotected");
-      const result = response.data as { message: string, value: number };
-      setUnprotectedResult((prior) => prior + result.value);
-    } catch (error) {
-      if (isAxiosError(error)) {
-        console.error('Axios Error:', error.response?.status, error.response?.data);
-      } else {
-        console.error('Unexpected Error:', error);
-      }
-    }
-  }, [setUnprotectedResult]);
 
   return (
     <>
@@ -82,11 +67,6 @@ const HomePage = () => {
       <div className="card">
         <button onClick={callProtectedEndpoint}>
           Protected API count {protectedResult}
-        </button>
-      </div>
-      <div className="card">
-        <button onClick={callUnprotectedEndpoint}>
-          Unprotected API count {unprotectedResult}
         </button>
       </div>
       <div className="card">

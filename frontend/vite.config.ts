@@ -6,7 +6,7 @@ export default defineConfig({
     server: {
         allowedHosts: ['localhost', 'invotastic.com', '.invotastic.com'],
         host: true,
-        port: parseInt(process.env.PORT ?? "6001"),
+        port: parseInt(process.env.PORT ?? "5173"),
     },
     plugins: [react()],
 });
