@@ -28,7 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <WristbandAuthProvider<MySessionData>
       transformSessionMetadata={transformSessionMetadata}
       loginUrl='/api/auth/login'
-      sessionUrl='/api/session'
+      sessionUrl='/api/auth/session'
     >
       <App />
     </WristbandAuthProvider>
