@@ -6,5 +6,5 @@ github.com/gorilla/sessions v1.4.0 h1:kpIYOp/oi6MG/p5PgxApU8srsSw9tuFbt46Lt7auzq
 github.com/gorilla/sessions v1.4.0/go.mod h1:FLWm50oby91+hl7p/wRxDth9bWSuk0qVL2emc7lT5ik=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
-github.com/wristband-dev/go-auth v0.2.0 h1:OrYg7Zcegx3cSzdOJLmExMnZlhE0ZpLJf1h7f6rSZ6g=
-github.com/wristband-dev/go-auth v0.2.0/go.mod h1:OX1n3t36Kk/6C+9I1hA9FC3vRdsE8g0dgpNtDQDHfmI=
+github.com/wristband-dev/go-auth v0.3.0 h1:IUPKaKkUZtYgjvVMBnTn0kKwswnFbeT0bnudRM05sao=
+github.com/wristband-dev/go-auth v0.3.0/go.mod h1:OX1n3t36Kk/6C+9I1hA9FC3vRdsE8g0dgpNtDQDHfmI=
