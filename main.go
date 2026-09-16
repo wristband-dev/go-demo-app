@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -123,6 +124,31 @@ func main() {
 			mux.ServeHTTP(w, r)
 			return
 		}
+
+		// The frontend is a single-page app using browser history routing, so client-side
+		// routes such as /login and /logout have no matching file on disk. Serve index.html
+		// for any unknown path and let the client router handle it; otherwise a full page
+		// load of one of those routes (for example the redirect back from Wristband after
+		// logout) would 404.
+		if !fileExists(distDir, r.URL.Path) {
+			r = r.Clone(r.Context())
+			r.URL.Path = "/"
+		}
 		fileServer.ServeHTTP(w, r)
 	})))
+}
+
+// fileExists reports whether the request path maps to a real file in the embedded frontend
+// build. The root path always resolves to index.html.
+func fileExists(distDir fs.FS, urlPath string) bool {
+	name := strings.TrimPrefix(path.Clean(urlPath), "/")
+	if name == "" || name == "." {
+		return true
+	}
+	f, err := distDir.Open(name)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	return true
 }
